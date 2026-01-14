@@ -9,3 +9,9 @@ wheels/
 # Virtual environments
 .venv
 documentation/
+
+# Environment files (API keys)
+.env
+*.env
+
+cache

@@ -73,9 +73,11 @@ class HybridSolver:
         self.network = network
         self.config = config
         
-        # Ensure matrices are computed
-        compute_distance_matrices(network)
-        compute_lead_time_matrices(network)
+        # Ensure matrices are computed (only if not already set by ORS/Google Maps)
+        if network.distance_sw is None:
+            compute_distance_matrices(network)
+        if network.lead_time_sw is None:
+            compute_lead_time_matrices(network)
         
         # Generate scenarios if not provided
         if scenarios is None:

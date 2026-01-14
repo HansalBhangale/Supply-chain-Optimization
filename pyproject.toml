@@ -15,6 +15,9 @@ dependencies = [
     "scipy>=1.14.0",
     "matplotlib>=3.9.0",
     "networkx>=3.4",
+    "python-dotenv>=1.2.1",
+    "googlemaps>=4.10.0",
+    "openrouteservice>=2.3.3",
 ]
 
 [build-system]
