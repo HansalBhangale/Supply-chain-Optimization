@@ -73,6 +73,47 @@ SAMPLE_INDIAN_CITIES = {
 }
 
 
+def geocode_address(address: str, api_key: Optional[str] = None) -> Optional[Tuple[float, float]]:
+    """
+    Convert an address to coordinates using OpenRouteService Geocoding API.
+    
+    Args:
+        address: Address string (e.g., "Mumbai, India")
+        api_key: ORS API key (reads from ORS_API_KEY env var if not provided)
+        
+    Returns:
+        Tuple of (lat, lng) or None if geocoding fails
+    """
+    import requests
+    
+    key = api_key or os.getenv("ORS_API_KEY")
+    if not key:
+        print("No ORS API key found for geocoding")
+        return None
+    
+    try:
+        url = "https://api.openrouteservice.org/geocode/search"
+        params = {
+            "api_key": key,
+            "text": address,
+            "size": 1,
+            "boundary.country": "IN"  # Prioritize India
+        }
+        
+        response = requests.get(url, params=params, timeout=10)
+        data = response.json()
+        
+        if data.get("features") and len(data["features"]) > 0:
+            coords = data["features"][0]["geometry"]["coordinates"]
+            # ORS returns [lng, lat], we need (lat, lng)
+            return (coords[1], coords[0])
+        
+        return None
+    except Exception as e:
+        print(f"Geocoding error: {e}")
+        return None
+
+
 @dataclass
 class ORSLocation:
     """Location with coordinates for ORS API."""
