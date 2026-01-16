@@ -18,6 +18,8 @@ dependencies = [
     "python-dotenv>=1.2.1",
     "googlemaps>=4.10.0",
     "openrouteservice>=2.3.3",
+    "qiskit-ibm-runtime>=0.45.0",
+    "plotly>=6.5.2",
 ]
 
 [build-system]

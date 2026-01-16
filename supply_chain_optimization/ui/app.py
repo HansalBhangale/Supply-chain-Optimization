@@ -98,6 +98,10 @@ if 'cost_settings' not in st.session_state:
         "horizon_days": 7
     }
 
+# Quantum settings
+if 'use_ibm_quantum' not in st.session_state:
+    st.session_state.use_ibm_quantum = False
+
 
 def create_map(suppliers, warehouses, customers, routes=None):
     """Create a Folium map with all locations and routes."""
@@ -263,7 +267,16 @@ def run_optimization():
         
         # Run hybrid solver
         solver = HybridSolver(network, config, scenarios)
-        result = solver.solve(use_classical_stage1=True)
+        
+        # Check if IBM Quantum is enabled
+        use_ibm = st.session_state.get('use_ibm_quantum', False)
+        
+        if use_ibm:
+            st.info("🔬 Running on IBM Quantum hardware... This may take 3-5 minutes.")
+            result = solver.solve(use_classical_stage1=False, use_ibm_quantum=True)
+            st.success("✅ IBM Quantum optimization complete!")
+        else:
+            result = solver.solve(use_classical_stage1=True)
         
         st.session_state.network = network
         st.session_state.optimization_result = result
@@ -462,6 +475,24 @@ with st.sidebar:
             value=st.session_state.cost_settings["horizon_days"],
             min_value=1, max_value=30, key="cost_horizon"
         )
+    
+    # IBM Quantum Settings
+    with st.expander("⚛️ Quantum Settings", expanded=False):
+        st.caption("Run on IBM Quantum hardware")
+        
+        st.session_state.use_ibm_quantum = st.checkbox(
+            "Use IBM Quantum Hardware",
+            value=st.session_state.get('use_ibm_quantum', False),
+            key="use_ibm_quantum_checkbox",
+            help="Run QAOA optimization on real IBM quantum computers"
+        )
+        
+        if st.session_state.use_ibm_quantum:
+            st.warning("⚠️ **IBM Quantum Execution:**\n"
+                      "- Takes 3-5 minutes\n"
+                      "- Uses your IBM Quantum quota\n"
+                      "- Works best for small problems")
+            st.info("Make sure IBM_QUANTUM_TOKEN is set in your .env file")
     
     st.markdown("---")
     

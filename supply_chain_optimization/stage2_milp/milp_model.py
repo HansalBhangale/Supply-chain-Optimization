@@ -51,9 +51,10 @@ class Stage2MILP:
         self.num_c = network.num_customers
         self.H = config.scenarios.horizon_days
         
-        # Big-M constants
-        self.M_sw = config.get_big_m_sw()
-        self.M_wc = config.get_big_m_wc()
+        # Big-M constants - TIGHTENED based on actual problem data
+        # Instead of loose defaults, compute from actual capacities
+        self.M_sw = self._compute_tight_M_sw()
+        self.M_wc = self._compute_tight_M_wc()
         
         # PuLP model
         self.model: Optional[pulp.LpProblem] = None
@@ -69,6 +70,41 @@ class Stage2MILP:
         # Results
         self.optimal_value: Optional[float] = None
         self.solve_status: Optional[str] = None
+    
+    def _compute_tight_M_sw(self) -> int:
+        """
+        Compute tight Big-M for supplier-warehouse constraints.
+        
+        M_sw = max trucks per route per day * horizon
+        Tighter: based on max supplier capacity / truck capacity
+        """
+        truck_cap = self.config.capacity.truck_capacity
+        
+        # Max trucks = max supplier capacity / truck capacity per day * horizon
+        max_supplier_cap = max(
+            max(self.network.suppliers[i].capacity.values())
+            for i in range(self.num_s)
+        )
+        max_trucks_per_day = int(np.ceil(max_supplier_cap / truck_cap)) + 1
+        
+        return max(max_trucks_per_day * self.H, 10)  # Minimum of 10
+    
+    def _compute_tight_M_wc(self) -> int:
+        """
+        Compute tight Big-M for warehouse-customer constraints.
+        
+        Tighter: based on max demand / truck capacity
+        """
+        truck_cap = self.config.capacity.truck_capacity
+        
+        # Max trucks = max total demand / truck capacity
+        max_demand = max(
+            sum(self.scenario.demand[k, t] for t in range(min(self.H, self.scenario.demand.shape[1])))
+            for k in range(self.num_c)
+        )
+        max_trucks_per_day = int(np.ceil(max_demand / truck_cap / self.H)) + 1
+        
+        return max(max_trucks_per_day * self.H, 10)  # Minimum of 10
     
     def build_model(self) -> pulp.LpProblem:
         """

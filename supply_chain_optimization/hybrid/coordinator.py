@@ -101,18 +101,24 @@ class HybridSolver:
     def solve(
         self,
         use_classical_stage1: bool = False,
+        use_ibm_quantum: bool = False,
         milp_solver: Optional[str] = None,
         milp_time_limit: int = 300,
-        warm_start: Optional[np.ndarray] = None
+        warm_start: Optional[np.ndarray] = None,
+        rerank_with_stage2: bool = False,
+        num_candidates: int = 3
     ) -> HybridSolverResult:
         """
         Run full two-stage optimization.
         
         Args:
             use_classical_stage1: If True, use classical solver for Stage 1
+            use_ibm_quantum: If True, use IBM Quantum hardware for Stage 1
             milp_solver: MILP solver ('PULP_CBC_CMD' or 'GUROBI_CMD')
             milp_time_limit: Time limit for Stage 2 MILP
             warm_start: Initial QAOA parameters for warm start
+            rerank_with_stage2: If True, generate multiple candidates and re-rank using Stage 2
+            num_candidates: Number of Stage 1 candidates for re-ranking
             
         Returns:
             HybridSolverResult with complete solution
@@ -122,11 +128,15 @@ class HybridSolver:
         print("=" * 60)
         
         # Stage 1: QAOA for strategic assignments
-        print("\n[Stage 1] Solving QUBO with QAOA...")
+        if use_ibm_quantum:
+            print("\n[Stage 1] Solving QUBO with IBM Quantum...")
+        else:
+            print("\n[Stage 1] Solving QUBO with QAOA...")
         stage1_start = time.time()
         
         x_raw, y_raw, stage1_value = self._solve_stage1(
             use_classical=use_classical_stage1,
+            use_ibm_quantum=use_ibm_quantum,
             warm_start=warm_start
         )
         
@@ -198,6 +208,7 @@ class HybridSolver:
     def _solve_stage1(
         self,
         use_classical: bool,
+        use_ibm_quantum: bool,
         warm_start: Optional[np.ndarray]
     ) -> Tuple[Dict, Dict, float]:
         """Solve Stage 1 QUBO."""
@@ -219,6 +230,9 @@ class HybridSolver:
         
         if use_classical:
             bitstring, value = self.qaoa_solver.solve_classical(qubo_matrix, constant)
+        elif use_ibm_quantum:
+            print("  Using IBM Quantum hardware...")
+            bitstring, value = self.qaoa_solver.solve_ibm_quantum(qubo_matrix, constant)
         else:
             bitstring, value = self.qaoa_solver.solve(
                 qubo_matrix, constant, indexer, warm_start
